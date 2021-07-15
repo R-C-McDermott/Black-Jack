@@ -69,14 +69,13 @@ class Player:
 
     def cardValueCount(self):
         card_value = [i.number for i in self.hand]
-        print(card_value)
-        for card in card_value:
-            if card > 10:
-                card = 10
+        for i in range(len(card_value)):
+            if card_value[i] > 10:
+                card_value[i] = 10
             else:
                 pass
-        print(card_value)
         return sum(card_value)
+
 
 
 class Human(Player):
@@ -130,24 +129,41 @@ class Table:
     def __init__(self):
         self.players = []
 
+# True and False statements to be used to return game over state (game over = True)
 
+    def playerStatus(self, player):
+        if player.cardValueCount() > 21:
+            print("Burst!")
+            return True
+        if player.cardValueCount() == 21:
+            print("Blackjack!")
+            return True
+        if player.cardValueCount() < 21:
+            pass
+
+    def addPlayer(self, player):
+        self.players.append(player)
 
 
 
 def main():
     # Create Player and Deck
+    game = Table()
     p = Human("Ryan", 100)
+    D = Dealer()
     d = Deck()
     d.shuffleDeck()
 
-    # Check deck size
-    print(f"Deck size: {d.deckSize()}")
+    game.addPlayer(p)
 
-    # Player draws hand and shows
-    p.draw(d, number_of_cards=2)
+    p.draw(d, number_of_cards=3)
     p.showHand()
-    p.showChips()
+    game.playerStatus(p, d)
     print(f"{p.cardValueCount()}")
+
+
+
+
 
     # Check deck size again to ensure everything is working properly
     #print(f"Deck size: {d.deckSize()}")
