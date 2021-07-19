@@ -66,6 +66,10 @@ class Player:
     def showHand(self):
         for h in self.hand:
             h.show()
+        print(f"Hand value: {self.cardValueCount()}")
+
+    #def showHandAndValue(self):
+
 
     def cardValueCount(self):
         card_value = [i.number for i in self.hand]
@@ -121,8 +125,14 @@ class Dealer(Player):
     def __init__(self):
         super().__init__()
 
-'''    def dealerHit(self):
-        if self.hand'''
+    def dealerHit(self, deck, number_of_cards=1):
+        hit_stand = True
+        while hit_stand == True:
+            if self.hand < 17:
+                self.draw(deck, number_of_cards)
+            if self.hand > 17:
+                hit_stand = False
+        print(f"Dealer has: {self.cardValueCount}")
 
 
 class Table:
@@ -141,25 +151,43 @@ class Table:
         if player.cardValueCount() < 21:
             pass
 
-    def addPlayer(self, player):
-        self.players.append(player)
+    def addPlayer(self):
+        try:
+            p_name = input("Please enter your name:\n>")
+            starting_chips = int(input("Starting chips:\n>"))
+            self.players.append(Human(p_name, starting_chips))
+        except ValueError:
+            print("Incorrect input - chips must be integer value ... Try again")
+            self.addPlayer()
+
+    def newRoundShuffle(self):
+        deck = Deck().shuffleDeck()
+        return deck
+
+    def playerCount(self):
+        try:
+            player_number = int(input("How many players are joining the table?:\n>"))
+            return player_number
+        except ValueError:
+            print("Incorrect input - number of players must be an integer value ... Try again")
+            self.playerCount()
+
+
 
 
 
 def main():
     # Create Player and Deck
     game = Table()
-    p = Human("Ryan", 100)
-    D = Dealer()
-    d = Deck()
-    d.shuffleDeck()
+    deck = game.newRoundShuffle()
+    dealer = Dealer()
+    total_players = game.playerCount()
+    for i in range(total_players):
+        print(f"Player {i+1} details...")
+        game.addPlayer()
+    print(f"{[player.name for player in game.players]}")
 
-    game.addPlayer(p)
-
-    p.draw(d, number_of_cards=3)
-    p.showHand()
-    game.playerStatus(p, d)
-    print(f"{p.cardValueCount()}")
+    #print(f"{p.cardValueCount()}")
 
 
 
