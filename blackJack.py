@@ -68,19 +68,16 @@ class Player:
             h.show()
         print(f"Hand value: {self.cardValueCount()}")
 
-    #def showHandAndValue(self):
-
 
     def cardValueCount(self):
-        card_value = [i.number for i in self.hand]
+        card_value = [j.number for j in self.hand]
         for i in range(len(card_value)):
+            #print(i)  # For test
             if card_value[i] > 10:
                 card_value[i] = 10
             else:
                 pass
         return sum(card_value)
-
-
 
 class Human(Player):
     def __init__(self, name, chips):
@@ -105,41 +102,39 @@ class Human(Player):
         except ValueError:
             print("Invalid input")
 
-    def playerHitStand(self, deck, number_of_cards=1):
+    def playerHitStand(self, deck):
         player_choice = str(input("Would you like to hit or stand? (H/S): "))
         player_choice = player_choice.strip().upper()
         try:
             if player_choice == "H":
-                self.draw(deck, number_of_cards)
+                self.draw(deck, 1)
+                return False
             if player_choice == "S":
-                pass
+                return True
             if player_choice not in ["H", "S"]:
                 print("Invalid input - Use H (Hit) or S (Stand)")
                 self.playerHitStand(deck, number_of_cards=1)
         except ValueError:
             print("Invalid input - Use H (Hit) or S (Stand)")
-            self.playerHitStand(deck, number_of_cards=1)
+            self.playerHitStand(deck)
+
 
 
 class Dealer(Player):
     def __init__(self):
         super().__init__()
 
-    def dealerHit(self, deck, number_of_cards=1):
-        hit_stand = True
-        while hit_stand == True:
-            if self.hand < 17:
-                self.draw(deck, number_of_cards)
-            if self.hand > 17:
-                hit_stand = False
-        print(f"Dealer has: {self.cardValueCount}")
+    def dealerHit(self, deck):
+        while True:
+            if self.cardValueCount() < 17:
+                self.draw(deck, 1)
+            if self.cardValueCount() > 17:
+                break
 
 
 class Table:
     def __init__(self):
         self.players = []
-
-# True and False statements to be used to return game over state (game over = True)
 
     def playerStatus(self, player):
         if player.cardValueCount() > 21:
@@ -160,11 +155,49 @@ class Table:
             print("Incorrect input - chips must be integer value ... Try again")
             self.addPlayer()
 
-    def newRoundShuffle(self):
-        deck = Deck().shuffleDeck()
-        return deck
+    def playRound(self, dealer, deck):
+        round_over = False
+        player_done = False
+        player = self.players[0]
+        player.showChips()
+        player.playBet()
+        player.draw(deck, 2)
+        dealer.draw(deck, 2)
+        while round_over == False:
+            while player_done == False:
+                player.showHand()
+                player_done = player.playerHitStand(deck)
+                if player.cardValueCount() > 21:
+                    print("Burst!")
+                    round_over = True
+                    break
+                if player.cardValueCount() == 21:
+                    print("Blackjack!")
+                    round_over = True
+                    player_done = True
+                if player.cardValueCount() < 21:
+                    pass
+            dealer.dealerHit(deck)
+            print("Dealer's Turn...")
+            dealer.showHand()
+            if dealer.cardValueCount() > player.cardValueCount():
+                print("Dealer wins!")
+                round_over = True
+            if player.cardValueCount() > dealer.cardValueCount():
+                print("Player wins!")
+                round_over = True
+            if dealer.cardValueCount() > 21:
+                print("Dealer is burst! Player wins!")
+                round_over = True
 
-    def playerCount(self):
+
+
+'''
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Functions for multiple players ... to be used for later versions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    def playerCountInput(self):
         try:
             player_number = int(input("How many players are joining the table?:\n>"))
             return player_number
@@ -172,29 +205,25 @@ class Table:
             print("Incorrect input - number of players must be an integer value ... Try again")
             self.playerCount()
 
+    def countPlayers(self):
+        return len([players for players in self.players]
 
+'''
 
 
 
 def main():
-    # Create Player and Deck
+    # Create table, dealer and deck objects
     game = Table()
-    deck = game.newRoundShuffle()
+    deck = Deck()
     dealer = Dealer()
-    total_players = game.playerCount()
-    for i in range(total_players):
-        print(f"Player {i+1} details...")
-        game.addPlayer()
-    print(f"{[player.name for player in game.players]}")
 
-    #print(f"{p.cardValueCount()}")
+    # Add player to game and shuffle deck
+    game.addPlayer()
+    deck.shuffleDeck()
 
-
-
-
-
-    # Check deck size again to ensure everything is working properly
-    #print(f"Deck size: {d.deckSize()}")
+    # Game loop
+    game.playRound(dealer, deck)
 
 if __name__ == '__main__':
     main()
