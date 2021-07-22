@@ -71,20 +71,20 @@ class Player:
 
     def cardValueCount(self):
         card_value = [j.number for j in self.hand]
+        new_value = []
         for i in range(len(card_value)):
-            #print(i)  # For test
             if card_value[i] > 10:
-                card_value[i] = 10
+                new_value.append(10)
             else:
-                pass
-        return sum(card_value)
+                new_value.append(card_value[i])
+        return sum(new_value)
 
 class Human(Player):
     def __init__(self, name, chips):
         super().__init__()
         self.name = name
         self.chips = chips
-        self.bet = 0
+        #self.bet = 0
 
     def showChips(self):
         print(f"Remaining balance: {self.chips}")
@@ -94,9 +94,9 @@ class Human(Player):
         try:
             if player_bet > self.chips:
                 print("You don't have enough chips to place that bet!")
-                self.bet()
+                self.playBet()
             else:
-                self.bet += player_bet
+                #self.bet += player_bet
                 self.chips -= player_bet
                 return player_bet
         except ValueError:
@@ -159,38 +159,69 @@ class Table:
         round_over = False
         player_done = False
         player = self.players[0]
+        player.hand = []
+        dealer.hand = []
+        print("\nShuffling deck...\n")
+        deck.shuffleDeck()
         player.showChips()
-        player.playBet()
+        player_bet = player.playBet()
         player.draw(deck, 2)
         dealer.draw(deck, 2)
-        while round_over == False:
-            while player_done == False:
-                player.showHand()
-                player_done = player.playerHitStand(deck)
-                if player.cardValueCount() > 21:
-                    print("Burst!")
-                    round_over = True
-                    break
-                if player.cardValueCount() == 21:
-                    print("Blackjack!")
-                    round_over = True
-                    player_done = True
-                if player.cardValueCount() < 21:
-                    pass
+        while player_done == False:
+            print("\n~~~~~~~~ PLAYER'S HAND ~~~~~~~~\n")
+            player.showHand()
+            print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+            player_done = player.playerHitStand(deck)
+            print("\n~~~~~~~~ PLAYER'S HAND ~~~~~~~~\n")
+            player.showHand()
+            print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+            if player.cardValueCount() > 21:
+                print("Burst!")
+                player_done = True
+                round_over = True
+            if player.cardValueCount() == 21:
+                print("Blackjack!")
+                player.chips += int(2.5*player_bet) # 3/2 odds for blackjack win plus original bet
+                player_done = True
+                round_over = True
+            if player.cardValueCount() < 21:
+                pass
+
+        if round_over == False:
             dealer.dealerHit(deck)
-            print("Dealer's Turn...")
+            print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                  "\n\nDealer's Turn...\n\n"
+                  "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
             dealer.showHand()
-            if dealer.cardValueCount() > player.cardValueCount():
-                print("Dealer wins!")
-                round_over = True
-            if player.cardValueCount() > dealer.cardValueCount():
-                print("Player wins!")
-                round_over = True
             if dealer.cardValueCount() > 21:
-                print("Dealer is burst! Player wins!")
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                      "\nDealer is burst! Player wins!")
+                player.chips += int(2*player_bet) # 1/1 odds for winning plus original bet
+                round_over = True
+            elif dealer.cardValueCount() > player.cardValueCount():
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                      "\nDealer wins!")
+                round_over = True
+            elif player.cardValueCount() > dealer.cardValueCount():
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                      "\nPlayer wins!")
+                player.chips += int(2*player_bet) # 1/1 odds for winning plus original bet
+                round_over = True
+            elif dealer.cardValueCount() == player.cardValueCount():
+                print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+                      "\nIt's a draw!")
+                player.chips += player_bet # return chips to player
                 round_over = True
 
-
+        try:
+            play_again = str(input("\nWould you like to play another round? (y/n)\n>"))
+            play_again = play_again.strip().lower()
+            if play_again == "y":
+                self.playRound(deck=Deck(), dealer=Dealer()) # Using fresh deck object
+            if play_again == "n":
+                print("\n~~~ Thank you, for playing! ~~~\n")
+        except ValueError:
+            print
 
 '''
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -215,15 +246,12 @@ Functions for multiple players ... to be used for later versions
 def main():
     # Create table, dealer and deck objects
     game = Table()
-    deck = Deck()
-    dealer = Dealer()
 
     # Add player to game and shuffle deck
     game.addPlayer()
-    deck.shuffleDeck()
 
     # Game loop
-    game.playRound(dealer, deck)
+    game.playRound(dealer=Dealer(), deck=Deck())
 
 if __name__ == '__main__':
     main()
