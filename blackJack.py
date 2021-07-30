@@ -1,5 +1,5 @@
 '''
- - BLACK JACK v1.1 -
+ - BLACK JACK v1.11 -
 
  By Ryan C. McDermott
 
@@ -12,8 +12,17 @@
 - Betting system now pays out depending on proper Black Jack odds.
 - Fixed dealer hit bug where an infinite loop would occur at 17.
 
-* TO FIX *
-- Soft and hard hands when considering hands with aces.
+*v1.11*
+- Card value now displays (soft value/hard value) for hands with aces.
+- Fixed the blackjack win rules - now detects blackjack win before
+main hit/stand loop.
+- No longer win 2.5 times bet for simply having 21, you now need to have
+blackjack.
+- Now reveals one card from the dealer's hand at beginning of every round.
+
+* TO ADD *
+- Multiplayer system.
+- Option to split.
 
 '''
 import random # to be used for shuffling
@@ -38,6 +47,10 @@ class Card:
         if card_value == 13:
             card_value = "King"
         print(f"{card_value} of {self.suit}")
+
+    # def hardSoftValue(self):
+    #     if self.number == 1:
+    #         return
 
 class Deck:
     def __init__(self):
@@ -74,18 +87,57 @@ class Player:
     def showHand(self):
         for h in self.hand:
             h.show()
-        print(f"Hand value: {self.cardValueCount()}")
+        if self.cardValueCount()[0] == self.cardValueCount()[1]:
+            print(f"Hand value: {self.cardValueCount()[0]}")
+        elif self.cardValueCount()[1] < 21:
+            print(f"Hand value: ({self.cardValueCount()[0]}/{self.cardValueCount()[1]})")
+        elif self.cardValueCount()[1] > 21:
+            print(f"Hand value: {self.cardValueCount()[0]}")
+        elif self.cardValueCount()[1] == 21:
+            print(f"Hand value: {self.cardValueCount()[1]}")
+
 
 
     def cardValueCount(self):
+
+        '''
+        The cardValueCount function iterates through the players current
+        hand and converts Jack, Queen and King (11, 12, 13) to 10.
+
+        The function also returns a soft and hard value for hands if
+        any aces are to appear. It works by creating two seperate lists -
+        soft_value and hard_value and summing each list to get the total hand
+        value. It also counts the number of aces while iterating in order to
+        avoid bugs with multiple aces in the players hand, leading to the
+        function giving both extremes i.e. 2, 22 for 2 aces as opposed to
+        2, 12 as you would say in a normal game of blackjack.
+
+        '''
         card_value = [j.number for j in self.hand]
-        new_value = []
+        soft_value = []
+        hard_value = []
+        ace_count = 0
         for i in range(len(card_value)):
             if card_value[i] > 10:
-                new_value.append(10)
+                soft_value.append(10)
+                hard_value.append(10)
+            elif card_value[i] == 1 and ace_count == 0:
+                soft_value.append(1)
+                hard_value.append(11)
+                ace_count += 1
+            elif card_value[i] == 1 and ace_count > 0:
+                soft_value.append(1)
+                hard_value.append(1)
             else:
-                new_value.append(card_value[i])
-        return sum(new_value)
+                soft_value.append(card_value[i])
+                hard_value.append(card_value[i])
+        return sum(soft_value), sum(hard_value)
+
+    def softOrHardVal(self):
+        if self.cardValueCount()[1] > 21:
+            return self.cardValueCount()[0] # Returns soft value if hard > 21
+        else:
+            return self.cardValueCount()[1] # Returns hard value if < 21
 
 class Human(Player):
     def __init__(self, name, chips):
@@ -148,25 +200,18 @@ class Dealer(Player):
 
     def dealerHit(self, deck):
         while True:
-            if self.cardValueCount() < 17:
+            if self.softOrHardVal() < 17:
                 self.draw(deck, 1)
-            if self.cardValueCount() >= 17:
+            if self.softOrHardVal() >= 17:
                 break
 
+    def initialShow(self):
+        self.hand[0].show()
+        print("<Hidden card>")
 
 class Table:
     def __init__(self):
         self.players = []
-
-    def playerStatus(self, player):
-        if player.cardValueCount() > 21:
-            print("Burst!")
-            return True
-        if player.cardValueCount() == 21:
-            print("Blackjack!")
-            return True
-        if player.cardValueCount() < 21:
-            pass
 
     def addPlayer(self):
         try:
@@ -198,11 +243,21 @@ class Table:
         player.draw(deck, 2)
         dealer.draw(deck, 2)
 
+        print("\n~~~~~~~~ PLAYER'S HAND ~~~~~~~~\n")
+        player.showHand()
+        print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
+        print("\n~~~~~~~~ DEALER HAS ~~~~~~~~~~~\n")
+        dealer.initialShow()
+        print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
+
+        if player.cardValueCount()[1] == 21:
+            print("Blackjack!")
+            player.chips += int(2.5*player.bet) # 3/2 odds for blackjack win plus original bet
+            player_done = True
+            round_over = True
         # Loop for player's turn
         while player_done == False:
-            print("\n~~~~~~~~ PLAYER'S HAND ~~~~~~~~\n")
-            player.showHand()
-            print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
             choice = player.playerHitStand(deck)
 
             # Check for double down
@@ -217,16 +272,14 @@ class Table:
             print("\n~~~~~~~~ PLAYER'S HAND ~~~~~~~~\n")
             player.showHand()
             print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n")
-            if player.cardValueCount() > 21:
+            if player.cardValueCount()[0] > 21:
                 print("Burst!")
                 player_done = True
                 round_over = True
-            if player.cardValueCount() == 21:
-                print("Blackjack!")
-                player.chips += int(2.5*player.bet) # 3/2 odds for blackjack win plus original bet
+            elif player.softOrHardVal() == 21:
+                print("You have 21")
                 player_done = True
-                round_over = True
-            if player.cardValueCount() < 21:
+            elif player.cardValueCount()[0] < 21:
                 pass
         # __________________________ #
 
@@ -241,21 +294,21 @@ class Table:
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
         # Winning and payout conditions
-            if dealer.cardValueCount() > 21:
+            if dealer.cardValueCount()[0] > 21:
                 print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                       "\nDealer is burst! Player wins!")
-                player.chips += int(2*player.bet) # 1/1 odds for winning plus original bet
+                player.chips += 2*player.bet # 1/1 odds for winning plus original bet
                 round_over = True
-            elif dealer.cardValueCount() > player.cardValueCount():
+            elif dealer.softOrHardVal() > player.softOrHardVal():
                 print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                       "\nDealer wins!")
                 round_over = True
-            elif player.cardValueCount() > dealer.cardValueCount():
+            elif player.softOrHardVal() > dealer.softOrHardVal():
                 print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                       "\nPlayer wins!")
-                player.chips += int(2*player.bet) # 1/1 odds for winning plus original bet
+                player.chips += 2*player.bet # 1/1 odds for winning plus original bet
                 round_over = True
-            elif dealer.cardValueCount() == player.cardValueCount():
+            elif dealer.softOrHardVal() == player.softOrHardVal():
                 print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
                       "\nIt's a draw!")
                 player.chips += player.bet # return chips to player
