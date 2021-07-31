@@ -10,8 +10,7 @@
  when the user is out of chips.
 
 <p float="left">
- <img height="500"/>
-  <img src="Screenshots/Screenshot_1.png" width="350" />
-  <img height="500" hspace="20"/>
-  <img src="Screenshots/Screenshot_2.png" width="350" />
+  <img src="Screenshots/Screenshot_1.png" width="350" height="500"/>
+  <hspace="20"/>
+  <img src="Screenshots/Screenshot_2.png" width="350" height="500"/>
 </p>
